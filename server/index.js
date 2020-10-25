@@ -2,7 +2,7 @@ const express = require('express');
 const socketio = require('socket.io');
 const http = require('http');
 
-const {addUser, removeUser, getUser, getUsersInRoom} = require('./users.js');
+const {addUser, removeUser, getUser, getUsersInRoom} = require('./users');
 
 const PORT = process.env.PORT || 5000;
 
@@ -19,8 +19,24 @@ io.on('connection', (socket) => {
 
         if(error){return callback(error)};
         
+        //send welcome message to user who has entered chat
+        socket.emit('message', {user:'admin', text: `${user.name}, welcome to the room ${user.room}`});
+        
+        //send message to all members of room except new member
+        socket.broadcast.to(user.room).emit('message', { user:'admin', text: `${user.name} has joined!`});
+        
         socket.join(user.room);
 
+        callback();
+
+    });
+
+    socket.on('sendMessage', (message, callback) => {
+        const user = getUser(socket.id);
+
+        io.to(user.room).emit('message', { user: user.name, text:message});
+
+        callback();
     });
     
     socket.on('disconnect', () => {
